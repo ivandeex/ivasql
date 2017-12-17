@@ -5,13 +5,16 @@ DROP VIEW IF EXISTS HighPaperAcceptance;
 
 
 CREATE TABLE Conference(
-  id INT PRIMARY KEY, name TEXT UNIQUE);
+  id INT PRIMARY KEY,
+  name TEXT UNIQUE
+);
 
 CREATE TABLE ConferenceEvent(
   id SERIAL PRIMARY KEY,
-	conference_id INT, -- REFERENCES Conference,
-	year INT,
-	UNIQUE(conference_id, year));
+  conference_id INT, -- REFERENCES Conference,
+  year INT,
+  UNIQUE(conference_id, year)
+);
 
 CREATE TABLE Paper(
   id INT PRIMARY KEY,
