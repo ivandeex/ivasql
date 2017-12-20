@@ -488,7 +488,3 @@ BEGIN
 	RAISE NOTICE 'len(a) = %', ARRAY_LENGTH(a, 1);
 	RAISE NOTICE 'a[i] = %', a[random() * 10 + 1];
 END $$;
-
-
-SELECT * from pg_collation where lower(collname) like '%ru%';
-SELECT * from pg_database;
