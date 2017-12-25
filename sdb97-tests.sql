@@ -478,7 +478,12 @@ SELECT * FROM test26(ARRAY['a','b','c']);
 
 
 SELECT array_length(array[1,2,3,4,5], 1);
-SELECT mod((random() * 65536)::int, 10) + 1;
+SELECT DISTINCT mod((random() * 65536)::int, 10) + 1 FROM generate_series(1,100) ORDER BY 1;
+SELECT DISTINCT (random() * 65536)::int % 10 + 1 FROM generate_series(1,100) ORDER BY 1;
+SELECT DISTINCT (random() * 9 + 1)::int FROM generate_series(1,100) ORDER BY 1;
+SELECT array[1,2,3] < array[1,2,3,4] AS "123<1234",
+       array[1,2,4] < array[1,2,3,4] AS "124<1234",
+       array[1,2,3,4,5] < array[1,2,3,4] AS "12345<1234";
 
 DO LANGUAGE plpgsql $$
 DECLARE
