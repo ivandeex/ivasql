@@ -61,7 +61,7 @@ CREATE OR REPLACE FUNCTION
 BEGIN
 	INSERT INTO BookingPos (booking_id, name, payed)
 		VALUES (_booking_id, _name, _payed);
-END 
+END
 $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION
@@ -76,7 +76,7 @@ ROLLBACK;
 TRUNCATE TABLE UserAct CASCADE;
 TRUNCATE TABLE Booking CASCADE;
 TRUNCATE TABLE Journey CASCADE;
-SELECT setval('Booking_Id_Seq', 1); 
+SELECT setval('Booking_Id_Seq', 1);
 
 INSERT INTO UserAct(id, credit) VALUES (101, 500);
 INSERT INTO Journey(id, capacity, booked) VALUES (201, 100, 0);

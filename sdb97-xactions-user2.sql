@@ -80,7 +80,7 @@ COMMIT;
 SELECT * FROM Journey;
 
 ----------------------------------------------------
--- TEST #06 (read committed, compare-and-swap) 
+-- TEST #06 (read committed, compare-and-swap)
 ROLLBACK;
 TRUNCATE TABLE Journey CASCADE;
 INSERT INTO Journey VALUES (1, '2084-05-09', 12, 10);
@@ -89,7 +89,7 @@ SELECT * FROM Journey;
 
 --
 BEGIN;
-SELECT booked FROM Journey WHERE id=1; -- INTO _booked2 
+SELECT booked FROM Journey WHERE id=1; -- INTO _booked2
 -- _old_booked = 10;  _new_booked = 12;
 UPDATE Journey SET booked=12 WHERE id=1 AND booked=10; -- CAS
 -- update 0 rows
@@ -134,7 +134,7 @@ COMMIT;
 
 -- ...
 
-BEGIN; -- ISOLATION LEVEL READ COMMITTED; 
+BEGIN; -- ISOLATION LEVEL READ COMMITTED;
 -- ...
 UPDATE Journey SET booked = booked - 1 WHERE id=1;
 COMMIT;
@@ -146,7 +146,7 @@ TRUNCATE TABLE Journey CASCADE;
 INSERT INTO Journey VALUES (1, '2084-05-09', 1e6, 100500);
 COMMIT;
 
-BEGIN; -- ISOLATION LEVEL READ COMMITTED; 
+BEGIN; -- ISOLATION LEVEL READ COMMITTED;
 -- ...
 UPDATE Journey SET booked = booked - 1 WHERE id=1;
 COMMIT;

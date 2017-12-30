@@ -63,7 +63,7 @@ COMMIT;
 SELECT * FROM Journey;
 
 ----------------------------------------------------
--- TEST #05 (read committed, select for update) 
+-- TEST #05 (read committed, select for update)
 ROLLBACK;
 TRUNCATE TABLE Journey CASCADE;
 INSERT INTO Journey VALUES (1, '2084-05-09', 12, 7);
@@ -80,7 +80,7 @@ SELECT * FROM Journey;
 SELECT * FROM Journey;
 
 ----------------------------------------------------
--- TEST #06 (read committed, compare-and-swap) 
+-- TEST #06 (read committed, compare-and-swap)
 ROLLBACK;
 TRUNCATE TABLE Journey CASCADE;
 INSERT INTO Journey VALUES (1, '2084-05-09', 12, 10);
