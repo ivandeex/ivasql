@@ -9,7 +9,8 @@ DROP TABLE IF EXISTS Conference CASCADE;
 
 CREATE TABLE University(
     university_id SERIAL PRIMARY KEY,
-    name TEXT
+    name TEXT,
+    country TEXT
 );
 CREATE TABLE Researcher(
     researcher_id SERIAL PRIMARY KEY,
@@ -18,35 +19,21 @@ CREATE TABLE Researcher(
 );
 CREATE TABLE Conference(
     conference_id SERIAL PRIMARY KEY,
-    name TEXT
+    name TEXT,
+    country TEXT,
+    budget INT
 );
 CREATE TABLE Participant(
     conference_id INT REFERENCES Conference,
     researcher_id INT REFERENCES Researcher,
     UNIQUE (conference_id, researcher_id)
 );
-CREATE INDEX Participant_Unique ON Participant(conference_id, researcher_id);
+--CREATE INDEX Participant_Unique ON Participant(conference_id, researcher_id);
 
 ----------------------------------------------------------------------------------
 
-INSERT INTO University(name) VALUES ('Stanford');
-INSERT INTO University(name)
-    SELECT 'University' || (random() * 999999)::int FROM generate_series(1, 100);
-
-INSERT INTO Conference(name) VALUES ('VLDB''15');
-INSERT INTO Conference(name)
-    SELECT 'Conf' || (random() * 999999)::int FROM generate_series(1, 100);
-
-INSERT INTO Researcher(university_id, name)
-    SELECT (random() * 100 + (SELECT min(university_id) FROM University))::int,
-           'Person' || (random() * 999999)::int
-    FROM generate_series(1, 100000);
-
-----------------------------------------------------------------------------------
-
-DROP FUNCTION IF EXISTS SetupResearcherTable(goal BIGINT);
-CREATE OR REPLACE FUNCTION
-    SetupResearcherTable(goal BIGINT) RETURNS text
+DROP FUNCTION IF EXISTS InitParticipant;
+CREATE OR REPLACE FUNCTION InitParticipant(goal INT) RETURNS text
 AS $$
 DECLARE
     total BIGINT;
@@ -57,7 +44,7 @@ DECLARE
     num_iter INT := 0;
     chunk_size BIGINT := 1000;
 BEGIN
-	SELECT min(conference_id) INTO min_conf FROM Conference;
+  SELECT min(conference_id) INTO min_conf FROM Conference;
     SELECT count(*) INTO num_conf FROM Conference;
     SELECT min(researcher_id) INTO min_resch FROM Researcher;
     SELECT count(*) INTO num_resch FROM Researcher;
@@ -93,17 +80,74 @@ BEGIN
 END
 $$ LANGUAGE plpgsql;
 
-SELECT SetupResearcherTable(1000000);
-SELECT COUNT(*) FROM Participant;
+----------------------------------------------------------------------------------
+
+DROP FUNCTION IF EXISTS InitAllTables;
+
+CREATE OR REPLACE FUNCTION
+    InitAllTables(n_uni INT, n_conf INT, n_rsch INT, n_part INT) RETURNS TEXT
+AS $$
+DECLARE
+    arr_country TEXT[] := ARRAY['France', 'China', 'Germany', 'USA', 'Italy', 'Spain'];
+    max_country INT := array_length(arr_country, 1) - 1;
+    status TEXT;
+    min_uni INT;
+BEGIN
+    TRUNCATE TABLE Participant CASCADE;
+    TRUNCATE TABLE Researcher  CASCADE;
+    TRUNCATE TABLE University  CASCADE;
+    TRUNCATE TABLE Conference  CASCADE;
+
+    INSERT INTO University(name,country)
+           VALUES ('Stanford', 'USA');
+    INSERT INTO University(name,country)
+        SELECT 'University' || (random() * 999999)::int,
+               arr_country[random() * max_country]
+        FROM generate_series(1, n_uni-1);
+
+    INSERT INTO Conference(name,country,budget)
+           VALUES ('VLDB''15', 'USA', 995);
+    INSERT INTO Conference(name,country,budget)
+        SELECT 'Conf' || (random() * 999999)::int,
+               arr_country[random() * max_country],
+               random() * 987654
+        FROM generate_series(1, n_conf-1);
+
+    SELECT min(university_id) INTO min_uni FROM University;
+
+    INSERT INTO Researcher(university_id, name)
+        SELECT (random() * (n_uni-1) + min_uni)::int,
+               'Person' || (random() * 999999)::int
+        FROM generate_series(1, n_rsch);
+
+    status := InitParticipant(n_part);
+
+    UPDATE Researcher
+    SET university_id = (SELECT university_id FROM University WHERE name='Stanford')
+    WHERE researcher_id
+    IN (SELECT researcher_id FROM Participant
+        WHERE conference_id = (SELECT conference_id FROM Conference
+                               WHERE name='VLDB''15'));
+    RETURN status;
+END
+$$ LANGUAGE plpgsql;
 
 ----------------------------------------------------------------------------------
 
-UPDATE Researcher
-SET university_id = (SELECT university_id FROM University WHERE name='Stanford')
-WHERE researcher_id
-IN (SELECT researcher_id FROM Participant
-    WHERE conference_id = (SELECT conference_id FROM Conference
-                           WHERE name='VLDB''15'));
+SELECT InitAllTables(/*n_uni*/ 200, /*n_conf*/ 1000, /*n_rsch*/ 20000, /*n_part*/ 100000);
+SELECT * FROM University ORDER BY university_id LIMIT 10;
+
+
+SELECT relname, relpages, reltuples FROM pg_class
+WHERE relname IN ('university','conference','researcher','participant');
+
+SELECT attname, n_distinct FROM pg_stats WHERE tablename='conference';
+
+CREATE INDEX idx_conf_country ON Conference(country);
+CREATE INDEX idx_conf_budget ON Conference(budget);
+
+SELECT attname, unnest(histogram_bounds::text::int[])
+FROM pg_stats WHERE tablename='conference' AND attname='budget';
 
 ----------------------------------------------------------------------------------
 
@@ -133,12 +177,12 @@ SELECT GetParticipantCount(1);
 -- slow query
 EXPLAIN ANALYZE
 SELECT name, GetParticipantCount(conference_id) AS participant_count
-FROM Conference WHERE GetParticipantCount(conference_id) > 7000;
+FROM Conference WHERE GetParticipantCount(conference_id) > 120;
 
 -- fast query
 EXPLAIN ANALYZE
 SELECT name, COUNT(*) AS participant_count
 FROM Conference JOIN Participant USING (conference_id)
-GROUP BY Conference.conference_id HAVING COUNT(*) > 7000;
+GROUP BY Conference.conference_id HAVING COUNT(*) > 120;
 
 ---------------------------------------------------------------------------------
