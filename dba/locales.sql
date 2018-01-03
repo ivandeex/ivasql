@@ -10,6 +10,8 @@ CREATE COLLATION pg_catalog."ru_ICU" (provider=icu, locale='ru');
 DROP COLLATION IF EXISTS pg_catalog."ru_ICU_upperfirst";
 CREATE COLLATION pg_catalog."ru_ICU_upperfirst" (provider=icu, locale='ru@-u-kf-upper');
 
+DROP TABLE IF EXISTS rus;
+CREATE TABLE rus (a text);
 INSERT INTO rus VALUES ('Joao'),('João');
 SELECT * FROM rus ORDER BY a COLLATE "en_US";
 SELECT * FROM rus ORDER BY a COLLATE "ru_RU";
