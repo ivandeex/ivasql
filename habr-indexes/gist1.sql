@@ -49,3 +49,57 @@ insert into ts(doc) values
   ('Я пойду погуляю'),        ('Белую березу заломаю'),    ('Люли, люли, заломаю');
 update ts set doc_tsv = to_tsvector(doc);
 
+-- SPgist-дерево для точек
+-- https://habrahabr.ru/company/postgrespro/blog/337502/
+create table points(p point);
+insert into points(p) values
+  (point '(1,1)'), (point '(3,2)'), (point '(6,3)'),
+  (point '(5,5)'), (point '(7,8)'), (point '(8,6)');
+create index points_quad_idx on points using spgist(p);
+set enable_seqscan = off;
+select * from points where p >^ point '(2,7)';
+
+select amop.amopopr::regoperator, amop.amopstrategy
+from pg_opclass opc
+join pg_opfamily opf on opf.oid = opc.opcfamily
+join pg_am am on am.oid = opf.opfmethod
+join pg_amop amop on amop.amopfamily = opc.opcfamily and amop.amoplefttype = opc.opcintype
+where opc.opcname = 'quad_point_ops' and am.amname = 'spgist';
+-- <<(point,point) | строго слева
+-- >>(point,point) | строго справа
+-- ~=(point,point) | совпадает
+-- <^(point,point) | строго снизу
+-- >^(point,point) | строго сверху
+-- <@(point,box)   | содержится в прямоугольнике
+create extension pageinspect;
+select * from spgist_print('points_quad_idx'::regclass);
+
+create index airports_coordinates_quad_idx
+  on airports using spgist(point(latitude,longitude));
+select * from spgist_stats('airports_coordinates_quad_idx');
+
+create index points_kd_idx on points using spgist(p kd_point_ops);
+
+-- spgist/radix tree (trie)
+create table sites(url text);
+insert into sites values ('postgrespro.ru'),('postgrespro.com'),
+                         ('postgresql.org'),('planet.postgresql.org');
+create index on sites using spgist(url);
+-- http://www.evernote.com/l/AEvj6lBKAe9F_o5TdgeIH1vy0qGAmqNyTsw/
+select * from sites where url like 'postgresp%ru';
+-- операторы с тильдами работают не с символами, а с байтами
+select * from sites where url is null;
+
+select amop.amopopr::regoperator, amop.amopstrategy
+from pg_opclass opc
+join pg_opfamily opf on opf.oid = opc.opcfamily
+join pg_am am on am.oid = opf.opfmethod
+join pg_amop amop on amop.amopfamily = opc.opcfamily
+                  and amop.amoplefttype = opc.opcintype
+where opc.opcname = 'text_ops'
+  and am.amname = 'spgist';
+
+
+
+
+
